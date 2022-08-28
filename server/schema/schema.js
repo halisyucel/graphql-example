@@ -2,19 +2,19 @@ const graphql = require('graphql');
 const Movie = require('../models/movie');
 const Director = require('../models/director');
 
-const { GraphQLObjectType, GraphQLID, GraphQLString, GraphQLInt, GraphQLSchema, GraphQLList } = graphql;
+const { GraphQLObjectType, GraphQLID, GraphQLString, GraphQLInt, GraphQLSchema, GraphQLList, GraphQLNonNull } = graphql;
 
 const MovieType = new GraphQLObjectType({
 	name: 'Movie',
 	fields: () => ({
 		id: { type: GraphQLID },
-		title: { type: GraphQLString },
+		title: { type: new GraphQLNonNull(GraphQLString) },
 		description: { type: GraphQLString },
 		year: { type: GraphQLInt },
 		director: {
 			type: DirectorType,
 			resolve(parent, args) {
-				return directors.find(director => director.id === parent.directorId);
+				return Director.findById(parent.directorId);
 			}
 		}
 	})
@@ -29,7 +29,7 @@ const DirectorType = new GraphQLObjectType({
 		movies: {
 			type: new GraphQLList(MovieType),
 			resolve(parent, args) {
-				return movies.filter(movie => movie.directorId === parent.id);
+				return Movie.find({ directorId: parent.id });
 			}
 		}
 	})
@@ -44,13 +44,13 @@ const RootQuery = new GraphQLObjectType({
 				id: { type: GraphQLID }
 			},
 			resolve(parent, args) {
-				return movies.find(movie => movie.id === args.id);
+				return Movie.findById(args.id);
 			}
 		},
 		movies: {
 			type: new GraphQLList(MovieType),
 			resolve(parent, args) {
-				return movies;
+				return Movie.find({});
 			}
 		},
 		director: {
@@ -59,13 +59,13 @@ const RootQuery = new GraphQLObjectType({
 				id: { type: GraphQLID }
 			},
 			resolve(parent, args) {
-				return directors.find(director => director.id === args.id);
+				return Director.findById(args.id);
 			}
 		},
 		directors: {
 			type: new GraphQLList(DirectorType),
 			resolve(parent, args) {
-				return directors;
+				return Director.find({});
 			}
 		}
 	}
@@ -106,16 +106,6 @@ const Mutation = new GraphQLObjectType({
 				return director.save();
 			}
 		},
-		addDirectorToMovie: {
-			type: MovieType,
-			args: {
-				movieId: { type: GraphQLID },
-				directorId: { type: GraphQLID }
-			},
-			resolve(parent, args) {
-				return Movie.findOneAndUpdate({ _id: args.movieId }, { $set: { directorId: args.directorId } }, { new: true });
-			}
-		}
 	}
 });
 
